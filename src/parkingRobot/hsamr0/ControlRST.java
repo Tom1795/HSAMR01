@@ -96,8 +96,8 @@ public class ControlRST implements IControl {
 			
 		this.encoderLeft  = perception.getControlLeftEncoder();
 		this.encoderRight = perception.getControlRightEncoder();
-		this.lineSensorRight		= perception.getRightLineSensor();
-		this.lineSensorLeft  		= perception.getLeftLineSensor();
+		this.lineSensorRight		= perception.getRightLineSensorValue();
+		this.lineSensorLeft  		= perception.getLeftLineSensorValue();
 		
 		// MONITOR (example)
 		monitor.addControlVar("RightSensor");
@@ -252,7 +252,7 @@ public class ControlRST implements IControl {
 	 * white = 0, black = 2, grey = 1
 	 */
     
-	private void exec_LINECTRL_ALGO(){
+/*	private void exec_LINECTRL_ALGO(){
 		leftMotor.forward();
 		rightMotor.forward();
 		int lowPower = 1;
@@ -319,51 +319,74 @@ public class ControlRST implements IControl {
 			// MONITOR (example)
 			monitor.writeControlComment("turn right");
 		}
-	}
+	}*/
 	
-	/*private void exec_LINECTRL_ALGO(){
+	private void exec_LINECTRL_ALGO(){
 		leftMotor.forward();
 		rightMotor.forward();
-		int lowPower = 1;
+		//int lowPower = 1;
 		int highPower = 30;
-		int Kp = 1;
-		int Ki = 0,1;
-		int Kd = 10;
-		float integralL = 0;
-		float integralR = 0;
-		float fehleraltL = 0;
-		float fehleraltR = 0;
-		float derivateL = 0;
-		float derivateR = 0;
-		float bodenL = 0;
-		float bodenR = 0;
+		double Kp = 0.2;
+		double Ki = 10;
+		int Kd = 0;
+		double integralL = 0;
+		double integralR = 0;
+		double fehleraltL = 0;
+		double fehleraltR = 0;
+		double derivateL = 0;
+		double derivateR = 0;
 		
- 	while (1){
- 
-		float errorL = (100- leftSensorValue)/100;
-		float errorR = (100- rightSensorValue)/100;
+		if(this.lineSensorLeft != 2 && (this.lineSensorRight != 2)){ 
 		
-		float integralL = integralL + errorL;
-		float integralR = integralR + errorR;
+	
+	 
+		double errorL = (100- lineSensorLeft)/100;
+		double errorR = (100- lineSensorRight)/100;
+		
+		integralL = integralL + errorL;
+		integralR = integralR + errorR;
 		
 		derivateL = errorL - fehleraltL;
 		derivateR = errorR - fehleraltR;
 		
-		float pidL = (errorL * Kp) + ( integralL * Ki) + ( derivateL * Kd);
-		float pidR = (errorR * Kp) + ( integralR * Ki) + ( derivateR * Kd);
+		double pidL = (errorL * Kp) + ( integralL * Ki) + ( derivateL * Kd);
+		double pidR = (errorR * Kp) + ( integralR * Ki) + ( derivateR * Kd);
 		
 		
 		
-		leftMotor.setPower(highPower-Math.round(pidL)); // Runden auf int durch Math.round
-		rightMotor.setPower(highPower-Math.round(pidR));
+		rightMotor.setPower((int)(highPower-Math.round(pidL))); // Runden auf int durch Math.round
+		leftMotor.setPower((int)(highPower-Math.round(pidR)));
 		
 		fehleraltL = errorL;
 		fehleraltR = errorR;
 		
+			}
+		else if (this.lineSensorLeft == 2 && (this.lineSensorRight == 2)){
+			this.stop();
+			}
 		}
 		
+		// else if (this.lineSensorLeft == 2 && (this.lineSensorRight ==2)){
 		
-		private void exec_LINECTRL_ALGO(){
+			/* boolean merkerL = false;
+			 * boolean merkerR = false;
+			 * if(this.lineSensorLeft == 2 && (this.lineSensorRight == 0)){
+			 * merkerL = true;
+			 * merkerR = false;
+			 * }
+			 * 
+			 * else if(this.lineSensorLeft == 0 && (this.lineSensorRight == 2)){
+			 * merkerL = false;
+			 * merkerR = true;
+			 * }
+			 * 
+			 * 
+			 */
+		
+	
+		
+		
+	/*	private void exec_LINECTRL_ALGO(){
 		leftMotor.forward();
 		rightMotor.forward();
 		int lowPower = 1;
