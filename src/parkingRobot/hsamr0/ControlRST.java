@@ -9,6 +9,7 @@ import parkingRobot.IPerception.*;
 import lejos.nxt.NXTMotor;
 import parkingRobot.INavigation;
 
+
 /**
  * Main class for control module
  *
@@ -45,6 +46,11 @@ public class ControlRST implements IControl {
 	 * line information measured by left light sensor: 0 - beside line, 1 - on line border or gray underground, 2 - on line
 	 */
 	int lineSensorLeft	=	0;
+	/**
+	 * line information measured by left light sensor: in percent
+	 */
+	double lineSensorRightValue	=	0;
+	double lineSensorLeftValue	=	0;
 	
 	NXTMotor leftMotor = null;
 	NXTMotor rightMotor = null;
@@ -73,7 +79,14 @@ public class ControlRST implements IControl {
 	
     double currentDistance = 0.0;
     double Distance = 0.0;
-  
+    boolean merkerr=false;
+    boolean merkerl=false;
+    boolean kurve=false;
+	double pidL=0;
+	double pidR=0;
+	int i =0;
+    int j =0;
+
 	
 	/**
 	 * provides the reference transfer so that the class knows its corresponding navigation object (to obtain the current 
@@ -96,8 +109,10 @@ public class ControlRST implements IControl {
 			
 		this.encoderLeft  = perception.getControlLeftEncoder();
 		this.encoderRight = perception.getControlRightEncoder();
-		this.lineSensorRight		= perception.getRightLineSensorValue();
-		this.lineSensorLeft  		= perception.getLeftLineSensorValue();
+		this.lineSensorRight		= perception.getRightLineSensor();
+		this.lineSensorLeft  		= perception.getLeftLineSensor();
+		this.lineSensorRightValue		= perception.getRightLineSensorValue();
+		this.lineSensorLeftValue  		= perception.getLeftLineSensorValue();
 		
 		// MONITOR (example)
 		monitor.addControlVar("RightSensor");
@@ -219,7 +234,9 @@ public class ControlRST implements IControl {
 	 */
 	private void update_LINECTRL_Parameter(){
 		this.lineSensorRight		= perception.getRightLineSensor();
-		this.lineSensorLeft  		= perception.getLeftLineSensor();		
+		this.lineSensorLeft  		= perception.getLeftLineSensor();	
+		this.lineSensorRightValue		= perception.getRightLineSensorValue();
+		this.lineSensorLeftValue  		= perception.getLeftLineSensorValue();
 	}
 	
 	/**
@@ -326,8 +343,8 @@ public class ControlRST implements IControl {
 		rightMotor.forward();
 		//int lowPower = 1;
 		int highPower = 30;
-		double Kp = 0.2;
-		double Ki = 10;
+		double Kp = 17;
+		double Ki = 0;
 		int Kd = 0;
 		double integralL = 0;
 		double integralR = 0;
@@ -335,13 +352,20 @@ public class ControlRST implements IControl {
 		double fehleraltR = 0;
 		double derivateL = 0;
 		double derivateR = 0;
-		
-		if(this.lineSensorLeft != 2 && (this.lineSensorRight != 2)){ 
-		
 	
-	 
-		double errorL = (100- lineSensorLeft)/100;
-		double errorR = (100- lineSensorRight)/100;
+
+		double errorL=0;
+		double errorR=0;
+		
+		
+		
+		if (!kurve){
+	  // MONITOR (example)
+			monitor.writeControlVar("LeftSensor", ""+this.lineSensorLeftValue);	
+			monitor.writeControlVar("RightSensor", ""+this.lineSensorRightValue);	
+			
+		errorL = (100- lineSensorLeftValue)/100;
+		errorR = (100 -lineSensorRightValue)/100;
 		
 		integralL = integralL + errorL;
 		integralR = integralR + errorR;
@@ -349,22 +373,64 @@ public class ControlRST implements IControl {
 		derivateL = errorL - fehleraltL;
 		derivateR = errorR - fehleraltR;
 		
-		double pidL = (errorL * Kp) + ( integralL * Ki) + ( derivateL * Kd);
-		double pidR = (errorR * Kp) + ( integralR * Ki) + ( derivateR * Kd);
+		pidR = (errorL * Kp) + ( integralL * Ki) + ( derivateL * Kd);
+		pidL = (errorR * Kp) + ( integralR * Ki) + ( derivateR * Kd);
 		
+		}
 		
-		
-		rightMotor.setPower((int)(highPower-Math.round(pidL))); // Runden auf int durch Math.round
-		leftMotor.setPower((int)(highPower-Math.round(pidR)));
+
 		
 		fehleraltL = errorL;
 		fehleraltR = errorR;
 		
-			}
-		else if (this.lineSensorLeft == 2 && (this.lineSensorRight == 2)){
-			this.stop();
-			}
+		if((this.lineSensorLeft != 2) && (this.lineSensorRight == 2)){ 
+			i++;
+			j=0;}
+		if((this.lineSensorLeft == 2) && (this.lineSensorRight != 2)){ 
+			j++;
+			i=0;}
+			
+		if (j>=5){
+			pidL=0;
+			pidR=30;
 		}
+		
+		if (i>=5){
+			pidL=30;
+			pidR=0;
+		}
+			
+			
+			/*if(merkerr){
+				pidL=0;
+				pidR=30;
+			}
+			if(merkerl){
+				pidL=30;
+				pidR=0;
+			}
+			kurve=true;
+			merkerr=false;
+			merkerl=false;
+		}
+		if((this.lineSensorLeft == 2) && (this.lineSensorRight != 2)){ 
+			merkerl=true;
+			merkerr=false;
+		}
+		if((this.lineSensorLeft != 2) && (this.lineSensorRight == 2)){ 
+			merkerl=false;
+			merkerr=true;
+		}
+		*/
+		rightMotor.setPower((int)(highPower-Math.round(pidL))); // Runden auf int durch Math.round
+		leftMotor.setPower((int)(highPower-Math.round(pidR)));
+		
+	}
+		
+		
+		
+			
+	
 		
 		// else if (this.lineSensorLeft == 2 && (this.lineSensorRight ==2)){
 		

@@ -18,7 +18,7 @@ public interface IControl {
 	public enum ControlMode {
 		
 		/**
-		 * folgt schwarzer Linie
+		 * folgt schwarzer Linie mittels PID Regler. Es gibt zwei verschieden Modi, einen PID Rgler und einer Eckenerkennung. 
 		 */
 		LINE_CTRL,
 		

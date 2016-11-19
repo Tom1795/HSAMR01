@@ -29,7 +29,7 @@ public interface IPerception {
 	 * 
 	 * @return brightness of the groundcolor in percent(%)
 	 */
-	public int getLeftLineSensorValue();
+	public double getLeftLineSensorValue();
 	
 	/**
 	 * returns the brightness of the subsurfacecolor under the right linesensor in percent 
@@ -38,7 +38,7 @@ public interface IPerception {
 	 * 
 	 * @return brightness of the groundcolor in percent(%)
 	 */
-	public int getRightLineSensorValue();
+	public double getRightLineSensorValue();
 	
 	/**
 	 * calibrate the two LineSensors 

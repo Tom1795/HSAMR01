@@ -113,12 +113,14 @@ public class PerceptionPMP implements IPerception {
 		return groundtype;
 	}
 	
-	public int getLeftLineSensorValue(){
-		return ((this.LeftLineSensor-this.LSlblack)/(this.LSlwhite-this.LSlblack))*100;
+	public double getLeftLineSensorValue(){
+		return(((this.LeftLineSensor*100-this.LSlblack*100)/(this.LSlwhite-this.LSlblack))); 
+		
 	}
 	
-	public int getRightLineSensorValue(){
-		return ((this.RightLineSensor-this.LSrblack)/(this.LSrwhite-this.LSrblack))*100;
+	public double getRightLineSensorValue(){
+		return(((this.RightLineSensor*100-this.LSrblack*100)/(this.LSrwhite-this.LSrblack)));
+		
 	}
 	
 	public synchronized void calibrateLineSensors(){
@@ -254,10 +256,10 @@ public class PerceptionPMP implements IPerception {
 		this.UOdmometry		=	(double)(((sensorBytes[1])<<8) | (sensorBytes[0] & 0xff));
 		this.VOdometry		=	(double)(((sensorBytes[3])<<8) | (sensorBytes[2] & 0xff));
 		this.OdometryT		=   (int)((readBuffer[5]<<8) | (readBuffer[4] & 0xff));
-		this.FrontSensorDistance		=	(double)(((sensorBytes[7] & 0xff)<<8) | (sensorBytes[6] & 0xff));
-		this.FrontSideSensorDistance	=	(double)(((sensorBytes[9] & 0xff)<<8) | (sensorBytes[8] & 0xff));
-		this.BackSensorDistance		=		(double)(((sensorBytes[11] & 0xff)<<8) | (sensorBytes[10] & 0xff));
-		this.BackSideSensorDistance	=		(double)(((sensorBytes[13] & 0xff)<<8) | (sensorBytes[12] & 0xff));		
+		this.FrontSensorDistance		=	((double)(((sensorBytes[7] & 0xff)<<8) | (sensorBytes[6] & 0xff))-50);
+		this.FrontSideSensorDistance	=	((double)(((sensorBytes[9] & 0xff)<<8) | (sensorBytes[8] & 0xff))-30);
+		this.BackSensorDistance		=		((double)(((sensorBytes[11] & 0xff)<<8) | (sensorBytes[10] & 0xff))-40);
+		this.BackSideSensorDistance	=		((double)(((sensorBytes[13] & 0xff)<<8) | (sensorBytes[12] & 0xff))-30);		
 
 		this.controlOdo.addShift(this.UOdmometry,this.VOdometry,this.OdometryT);
 		this.navigationOdo.addShift(this.UOdmometry,this.VOdometry,this.OdometryT);
