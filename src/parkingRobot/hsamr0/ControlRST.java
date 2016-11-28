@@ -52,6 +52,10 @@ public class ControlRST implements IControl {
 	double lineSensorRightValue	=	0;
 	double lineSensorLeftValue	=	0;
 	
+	/**
+	 * line information measured by left light sensor: in value
+	 */
+	
 	NXTMotor leftMotor = null;
 	NXTMotor rightMotor = null;
 	
@@ -59,12 +63,13 @@ public class ControlRST implements IControl {
 	INavigation navigation = null;
 	IMonitor monitor = null;
 	ControlThread ctrlThread = null;
+	
 
     int leftMotorPower = 0;
 	int rightMotorPower = 0;
 	
-	double velocity = 0.0;
-	double angularVelocity = 0.0;
+	double velocity = 0.0; //v
+	double angularVelocity = 0.0; //w
 	
 	Pose startPosition = new Pose();
 	Pose currentPosition = new Pose();
@@ -74,6 +79,11 @@ public class ControlRST implements IControl {
 	
 	EncoderSensor controlRightEncoder    = null;
 	EncoderSensor controlLeftEncoder     = null;
+	
+	
+
+	
+
 
 	int lastTime = 0;
 	
@@ -86,6 +96,19 @@ public class ControlRST implements IControl {
 	double pidR=0;
 	int i =0;
     int j =0;
+    private int speedL =0;
+
+	private int speedR = 0;
+	
+	int vsoll = 0;
+	int wsoll = 0;
+	
+	double distance_old = 0;
+	
+	double leftAnglesum = 0;
+	double rightAnglesum =0;
+	
+	double driving_direction = 1;
 
 	
 	/**
@@ -101,6 +124,7 @@ public class ControlRST implements IControl {
 	public ControlRST(IPerception perception, INavigation navigation, NXTMotor leftMotor, NXTMotor rightMotor, IMonitor monitor){
 		this.perception = perception;
         this.navigation = navigation;
+        
         this.monitor = monitor;
 		this.leftMotor = leftMotor;
 		this.rightMotor = rightMotor;
@@ -114,9 +138,15 @@ public class ControlRST implements IControl {
 		this.lineSensorRightValue		= perception.getRightLineSensorValue();
 		this.lineSensorLeftValue  		= perception.getLeftLineSensorValue();
 		
+		//this.UOdmometry                 = perception.getUOdmometryDiffernce()
+				;
+		
 		// MONITOR (example)
 		monitor.addControlVar("RightSensor");
 		monitor.addControlVar("LeftSensor");
+		
+		//monitor.addControlVar("LeftAnglem");
+		//monitor.addControlVar("RightAnglem");
 		
 		this.ctrlThread = new ControlThread(this);
 		
@@ -213,6 +243,13 @@ public class ControlRST implements IControl {
 	 */
 	private void update_VWCTRL_Parameter(){
 		setPose(navigation.getPose());
+		this.encoderLeft  = perception.getControlLeftEncoder();
+		this.encoderRight = perception.getControlRightEncoder();
+		
+		this.angleMeasurementLeft  	= this.encoderLeft.getEncoderMeasurement();
+
+		this.angleMeasurementRight 	= this.encoderRight.getEncoderMeasurement();
+
 	}
 	
 	/**
@@ -401,79 +438,15 @@ public class ControlRST implements IControl {
 		}
 			
 			
-			/*if(merkerr){
-				pidL=0;
-				pidR=30;
-			}
-			if(merkerl){
-				pidL=30;
-				pidR=0;
-			}
-			kurve=true;
-			merkerr=false;
-			merkerl=false;
-		}
-		if((this.lineSensorLeft == 2) && (this.lineSensorRight != 2)){ 
-			merkerl=true;
-			merkerr=false;
-		}
-		if((this.lineSensorLeft != 2) && (this.lineSensorRight == 2)){ 
-			merkerl=false;
-			merkerr=true;
-		}
-		*/
+			
 		rightMotor.setPower((int)(highPower-Math.round(pidL))); // Runden auf int durch Math.round
 		leftMotor.setPower((int)(highPower-Math.round(pidR)));
 		
 	}
 		
 		
-		
-			
 	
-		
-		// else if (this.lineSensorLeft == 2 && (this.lineSensorRight ==2)){
-		
-			/* boolean merkerL = false;
-			 * boolean merkerR = false;
-			 * if(this.lineSensorLeft == 2 && (this.lineSensorRight == 0)){
-			 * merkerL = true;
-			 * merkerR = false;
-			 * }
-			 * 
-			 * else if(this.lineSensorLeft == 0 && (this.lineSensorRight == 2)){
-			 * merkerL = false;
-			 * merkerR = true;
-			 * }
-			 * 
-			 * 
-			 */
-		
-	
-		
-		
-	/*	private void exec_LINECTRL_ALGO(){
-		leftMotor.forward();
-		rightMotor.forward();
-		int lowPower = 1;
-		int highPower = 30;
-		float Kp =10;
 
-	while(1){
-		
-		float errorL = (100- leftSensorValue)/100;
-		float errorR = (100- rightSensorValue)/100;
-		
-		float pidL = errorL * Kp;
-		float pidR = errorR * Kp;
-		
-		leftMotor.setPower(highPower-Math.round(pidL)); // Runden auf int durch Math.round
-		rightMotor.setPower(highPower-Math.round(pidR));
-
-	
-	}
-	
-	*/
 	
 	
 	private void stop(){
@@ -487,7 +460,217 @@ public class ControlRST implements IControl {
      * @param v velocity of the robot
      * @param omega angle velocity of the robot
      */
-	private void drive(double v, double omega){
-		//Aufgabe 3.2
+	/*private void drive(double v, double omega){
+	    leftMotor.forward();
+		rightMotor.forward();
+		double n= 0.5; //?
+		v=30;
+		v=n*v;
+		double distance = 10;
+		
+		
+		this.angleMeasurementLeft  	= this.encoderLeft.getEncoderMeasurement();
+
+		this.angleMeasurementRight 	= this.encoderRight.getEncoderMeasurement();
+		
+		double encoderLeft = new IPerception.EncoderSensor();
+
+		if(omega == 0 ){
+		while (distance != distLeft){
+		distLeft = ((this.encoderLeft) * distance)/ (Math.PI * 0.56)); //distance of left  wheel in cm/s
+		rightMotor.setPower((int)(v)); 
+		leftMotor.setPower((int)(v));
+			
+		}
+			
+		this.stop();	
+		this.angleMeasurementLeft =0; 
+		distLeft = 0;
+		}
+		
+		if (omega !=0){
+		}
+		//double w 			= (vRight - vLeft) / 125; //angular velocity of robot in rad/s
+
+		rightMotor.setPower((int)(v)); 
+		leftMotor.setPower((int)(v));
+		
+		
 	}
-}
+	*/
+	
+	
+
+
+	/** the distance between the wheels in m */
+
+	private static final double WHEEL_DISTANCE = 18; /*12cm Radabstand + 6 cm Offset durch empirisches probieren*/
+
+	/** the radius of the wheels */
+
+	private static final double WHEEL_RADIUS = 5.6; 
+
+	/** the distance traveled when the wheel turns one rad */
+
+	private static final double DISTANCE_PER_ROTATION = WHEEL_RADIUS * Math.PI    ;
+	
+	  
+	
+
+
+	/** constructs a new VWCommand 
+
+	 * @param v			The desired velocity of the robots center
+
+	 * @param w			The desired angular velocity of the robot around its center
+	 
+
+	 */
+	
+	
+
+	public void drive (double v, double w){
+		
+		//driving_direction = 1;
+		
+		if ( driving_direction   == 1){
+			
+			leftMotor.forward();
+			rightMotor.forward();
+			
+			
+			}
+			
+			if ( driving_direction == 0){
+				
+				leftMotor.backward();
+				rightMotor.backward();
+				
+				}
+		
+		leftMotor.forward();
+		rightMotor.forward();
+	
+		
+		double dist_gerade =0;   /* Distanz für Geradeausfahrt cm*/
+		dist_gerade = dist_gerade /DISTANCE_PER_ROTATION; 
+		
+		double dist_kurve = 360; /* Drehung in °*/
+		dist_kurve = (dist_kurve /90) * (WHEEL_DISTANCE/ 2)/ DISTANCE_PER_ROTATION ; /* notwendige Radumdrehungen*/
+		
+		double leftAngle 	= this.angleMeasurementLeft.getAngleSum();
+		double rightAngle 	= this.angleMeasurementRight.getAngleSum();
+		Pose winkel       = navigation.getPose();
+		//double winkelresult = this.winkel
+		
+		
+		
+		leftAnglesum = leftAnglesum + leftAngle; 
+		rightAnglesum = rightAnglesum + rightAngle;
+		
+		//monitor.writeControlComment("Winkelp " + Winkel);
+		
+		//monitor.writeControlComment("LeftAngle " + leftAnglesum);	
+		//monitor.writeControlComment("RightAngle "+ rightAnglesum); 
+		//monitor.writeControlComment("kurvendist " + dist_kurve);
+		
+		vsoll = 0; // Geschwindigkeit in cm/s 
+		wsoll = 90; // Drehung in °/s
+		
+	//EncoderSensor test = controlRightEncoder;
+		//distance_old = this.UOdmometry.getUOdmometryDiffernce();
+	
+	v= vsoll * 3 * DISTANCE_PER_ROTATION ; // 3 entspricht 1 cm/s 
+	w=  wsoll* 0.9;
+
+	
+
+		if (w == 0){
+			
+			
+
+				{if (Math.abs(dist_gerade) > leftAnglesum /360 ){
+
+			    speedL = speedR = (int) (v / DISTANCE_PER_ROTATION );
+
+					}
+				else {
+					this.stop();
+					}
+				}
+		}
+
+		else if (v == 0 && w> Math.abs(45))
+
+		{
+			{if (Math.abs(dist_kurve) >  Math.abs(leftAnglesum /360)){
+
+			   speedL = (int) (-WHEEL_DISTANCE / 2.0 * w / DISTANCE_PER_ROTATION);
+
+			   speedR = (int) (WHEEL_DISTANCE / 2.0 * w / DISTANCE_PER_ROTATION);
+
+					}
+				else {
+					this.stop();
+					}
+
+			
+
+			}
+		}
+		
+		else if (v == 0 && w<= 45 && w >0)
+
+		{
+			{if (2 * Math.abs(dist_kurve) > Math.abs(leftAnglesum /360 )){
+
+			speedL = (int) (WHEEL_DISTANCE * w / DISTANCE_PER_ROTATION);
+
+			}
+			else {
+				this.stop();
+				}
+
+			}
+		}
+		
+		else if (v == 0 && w<= - 45 && w >0)
+
+		{if (2 * Math.abs(dist_kurve) > Math.abs(rightAnglesum /360 )){
+
+			speedR = (int) (WHEEL_DISTANCE * w / DISTANCE_PER_ROTATION);
+
+			}
+			else {
+				this.stop();
+				}
+
+			}
+
+	/*	else
+
+		{
+
+			double radius = v / w;
+
+			speedL = (int) ((radius - WHEEL_DISTANCE / 2.0) * v / radius / DISTANCE_PER_ROTATION);
+
+			speedR = (int) ((radius + WHEEL_DISTANCE / 2.0) * v / radius / DISTANCE_PER_ROTATION);
+
+		}
+		
+     */
+		
+		
+		rightMotor.setPower(speedR); 
+		
+		leftMotor.setPower(speedL);
+		
+	}
+	public void prepare(int speedLeft, int speedRight, Pose currentPose) {
+
+	}
+}	
+		
+	
+	

@@ -126,7 +126,7 @@ public class GuidanceAT {
 					
 					//Into action
 					if ( lastStatus != CurrentStatus.DRIVING ){
-						control.setCtrlMode(ControlMode.LINE_CTRL);
+						control.setCtrlMode(ControlMode.VW_CTRL	);
 					}
 					
 					//While action				
