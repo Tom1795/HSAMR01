@@ -14,7 +14,6 @@ import parkingRobot.hsamr0.NavigationThread;
 /**
  * A executable basic example implementation of the corresponding interface provided by the Institute of Automation with
  * limited functionality:
-
  * <p>
  * In this example only the both encoder sensors from the {@link IPerception} implementation are used for periodically calculating
  * the robots position and corresponding heading angle (together called 'pose'). Neither any use of the map information or other
@@ -89,15 +88,15 @@ public class NavigationAT implements INavigation{
 	/**
 	 * robot specific constant: radius of left wheel
 	 */
-	static final double LEFT_WHEEL_RADIUS	= 	0.028; // only rough guess, to be measured exactly and maybe refined by experiments
+	static final double LEFT_WHEEL_RADIUS	= 	0.056; // only rough guess, to be measured exactly and maybe refined by experiments
 	/**
 	 * robot specific constant: radius of right wheel
 	 */
-	static final double RIGHT_WHEEL_RADIUS	= 	0.028; // only rough guess, to be measured exactly and maybe refined by experiments
+	static final double RIGHT_WHEEL_RADIUS	= 	0.056; // only rough guess, to be measured exactly and maybe refined by experiments
 	/**
 	 * robot specific constant: distance between wheels
 	 */
-	static final double WHEEL_DISTANCE		= 	0.114; // only rough guess, to be measured exactly and maybe refined by experiments
+	static final double WHEEL_DISTANCE		= 	0.120; // only rough guess, to be measured exactly and maybe refined by experiments
 	
 	
 	
@@ -191,7 +190,7 @@ public class NavigationAT implements INavigation{
 	/**
 	 * indicates if parking slot detection should be switched on (true) or off (false)
 	 */
-	boolean parkingSlotDetectionIsOn		= false;
+	boolean parkingSlotDetectionIsOn		= true; // testing 
 	/**
 	 * pose class containing bundled current X and Y location and corresponding heading angle phi
 	 */
@@ -253,7 +252,7 @@ public class NavigationAT implements INavigation{
 	public synchronized void updateNavigation(){	
 		this.updateSensors();
 		this.calculateLocation();
-		this.parkingSlotDetectionIsOn = true; //testing only
+		//this.parkingSlotDetectionIsOn = true; //testing only
 		if (this.parkingSlotDetectionIsOn)
 				this.detectParkingSlot();
 		
@@ -284,7 +283,7 @@ public class NavigationAT implements INavigation{
 	// Private methods
 	
 	/**
-	 * calls the perception methods for obtaining actual measurement data and writes the data into members
+	 * calls the perception methods for obtainin g actual measurement data and writes the data into members
 	 */
 	private void updateSensors(){		
 		this.lineSensorRight		= perception.getRightLineSensor();
@@ -352,12 +351,13 @@ public class NavigationAT implements INavigation{
 	}
 	
 	// ---- WORK IN PROGRESS ----
-	private void improveHeadingIR() {
+	private void improveHeadingTriang() {
 		
 		if(testTriangSens(this.backSideSensorDistance) && testTriangSens(this.frontSideSensorDistance)) {
 			float angleResult = (float) Math.atan(Math.abs(this.frontSideSensorDistance - this.backSideSensorDistance) / DISTANCE_BETWEEN_SIDE_SENSORS);
 			
 			this.determineLineForAngle(angleResult);
+			
 		}
 	}
 	
@@ -387,6 +387,36 @@ public class NavigationAT implements INavigation{
 		}
 	}
 	
+	/**
+	 * Setzt Phi in Abhängigkeit von der aktuellen Linie
+	 * @return 
+	 */
+	private float helpAngle() {
+		float helpAngle = 0; 
+		
+		switch(currentLine) {
+		case 0: helpAngle = 0;
+				break;
+		case 1: helpAngle = 90;
+				break;
+		case 2: helpAngle = 180;
+				break;
+		case 3: helpAngle = 270;
+				break;
+		case 4: helpAngle = 180;
+				break;
+		case 5: helpAngle = 90;
+				break;
+		case 6: helpAngle = 180;
+				break;
+		case 7: helpAngle = 270;
+				break;
+		}
+		
+		float helpAngleResult = helpAngle;
+		return helpAngleResult;
+	}
+	
 	private boolean testTriangSens(double distance) {
 		if((distance < TRIANG_SENS_MAX_DIST) && (distance > TRIANG_SENS_MIN_DIST))		// maximale und minimale distanz ergänzen..
 			return true;
@@ -413,29 +443,42 @@ public class NavigationAT implements INavigation{
 	 */
 	private void detectParkingSlot(){
 		
+		
+		//if((currentParkingSlot.getFrontBoundaryPosition()) && (frontSensorDistance > MAX_WALL_DISTANCE) && ()) {
+			
+	//	}
+		
+		
+		
+		
+		
+		// + + + + + 
 		// backBoundary der Parklücke
-		if((frontSensorDistance > MAX_WALL_DISTANCE) && (currentParkingSlot.getBackBoundaryPosition() == null)) {
+		if( (currentParkingSlot.getFrontBoundaryPosition() == null) && (currentParkingSlot.getBackBoundaryPosition() == null) && (frontSideSensorDistance > MAX_WALL_DISTANCE)) {
 			Point boundary;
 			
 			boundary = new Point(pose.getX() + OFFSET_FRONT_SIDE_SENSOR, pose.getY());
 			currentParkingSlot.setBackBoundaryPosition(boundary);
 			monitor.writeNavigationComment("backBoundary gefunden: " + currentParkingSlot.getBackBoundaryPosition()); //debugging
 		}
+		else currentParkingSlot.setBackBoundaryPosition(null);
 		
 		// frontBoundary der Parklücke
-		if((currentParkingSlot.getBackBoundaryPosition() != null) && (frontSideSensorDistance < MIN_SLOT_DISTANCE)) {
-			if((backSideSensorDistance < MIN_SLOT_DISTANCE) && (currentParkingSlot.getBackBoundaryPosition() != null)) {
-				
-				Point boundary;
-				
-				boundary = new Point(pose.getX() - OFFSET_BACK_SIDE_SENSOR, pose.getY());
-				currentParkingSlot.setFrontBoundaryPosition(boundary);
-				monitor.writeNavigationComment("frontBoundary gefunden: " + currentParkingSlot.getBackBoundaryPosition()); //debugging
+		if((currentParkingSlot.getBackBoundaryPosition() != null) && (currentParkingSlot.getFrontBoundaryPosition() == null)) {
+			if((currentParkingSlot.getBackBoundaryPosition() != null) && (frontSideSensorDistance < MIN_SLOT_DISTANCE)) {
+				if((backSideSensorDistance < MIN_SLOT_DISTANCE) && (currentParkingSlot.getBackBoundaryPosition() != null)) {
+					
+					Point boundary;
+					
+					boundary = new Point(pose.getX() - OFFSET_BACK_SIDE_SENSOR, pose.getY());
+					currentParkingSlot.setFrontBoundaryPosition(boundary);
+					monitor.writeNavigationComment("frontBoundary gefunden: " + currentParkingSlot.getBackBoundaryPosition()); //debugging
+				}
 			}
 		}
 		// Status der Parklücke
 		if((currentParkingSlot.getBackBoundaryPosition() != null) && (currentParkingSlot.getFrontBoundaryPosition() != null)) {
-			double betrag = Math.abs(currentParkingSlot.getBackBoundaryPosition().getX()) - Math.abs(currentParkingSlot.getFrontBoundaryPosition().getX());
+			double betrag = currentParkingSlot.getBackBoundaryPosition().getX() - currentParkingSlot.getFrontBoundaryPosition().getX();
 			betrag = Math.abs(betrag);
 			if(betrag > ROBOT_LENGTH) {
 				currentParkingSlot.setStatus(ParkingSlotStatus.SUITABLE_FOR_PARKING);
@@ -450,6 +493,35 @@ public class NavigationAT implements INavigation{
 				monitor.writeNavigationComment("Parklücke passt nicht! " + "ID= " + currentParkingSlot.getID() + " bBP= " + currentParkingSlot.getBackBoundaryPosition() + " fBP= " + currentParkingSlot.getFrontBoundaryPosition() + " status= " + currentParkingSlot.getStatus()); //debugging
 			
 			}
+			
+//			for( int i = 0; i < parkingSlots.length; i++) {
+//				if(sameSlot(parkingSlots[i], currentParkingSlot)) {
+					
+					// TODO improving parking slot measurements (2. Verteidigung)
+					
+					//Point newBackBoundary = new Point();
+					
+					//Point newFrontBoundary = new Point();
+					//ParkingSlot newPS = new ParkingSlot(i, null, newBackBoundary, newFrontBoundary, 0);
+					
+					// parkingSlots[i] = newPS;
+					
+					// + + + + + + + + + + + + + + + + + + + + + + + + + + + + + +
+//					parkingSlots[i] = currentParkingSlot; // aktuell wird die Parklücke ohne weitere Verbesserung aktualisiert
+//				}
+//				else {
+					parkingSlots[slotCounter] = currentParkingSlot;
+					slotCounter += 1;
+					monitor.writeNavigationComment("Neue Parklücke gesichert auf: " + currentParkingSlot.getID() + "!");
+					
+					// Reset currentParkingSlot
+					currentParkingSlot.setID(currentParkingSlot.getID() + 1);
+					currentParkingSlot.setBackBoundaryPosition(null);
+					currentParkingSlot.setFrontBoundaryPosition(null);
+					currentParkingSlot.setStatus(null);
+					currentParkingSlot.setMeasurementQuality(0);
+//				}
+//			}
 		}
 		
 		
@@ -459,40 +531,42 @@ public class NavigationAT implements INavigation{
 		
 		// ++++++++++++++++++++++++++++
 		
+//		alte Funktion..
 		
-		
-		if(currentParkingSlot.getStatus() == ParkingSlotStatus.SUITABLE_FOR_PARKING) {
-			// nur passende Parklücken werden gespeichert
-			
-			parkingSlots[slotCounter] = currentParkingSlot;
-			slotCounter += 1;
-			monitor.writeNavigationComment("Parklücke gespeichert auf " + currentParkingSlot.getID() + "!");
-			
-			// Reset currentParkingSlot
-			currentParkingSlot.setID(currentParkingSlot.getID() + 1);
-			currentParkingSlot.setBackBoundaryPosition(null);
-			currentParkingSlot.setFrontBoundaryPosition(null);
-			currentParkingSlot.setStatus(null);
-			currentParkingSlot.setMeasurementQuality(0);
-		}
+//		if(currentParkingSlot.getStatus() != null) {
+//			
+//			
+//			parkingSlots[slotCounter] = currentParkingSlot;
+//			slotCounter += 1;
+//			monitor.writeNavigationComment("Parklücke gespeichert auf " + currentParkingSlot.getID() + "!");
+//			
+//			// Reset currentParkingSlot
+//			currentParkingSlot.setID(currentParkingSlot.getID() + 1);
+//			currentParkingSlot.setBackBoundaryPosition(null);
+//			currentParkingSlot.setFrontBoundaryPosition(null);
+//			currentParkingSlot.setStatus(null);
+//			currentParkingSlot.setMeasurementQuality(0);
+//		}
 		
 		
 		
 		//return; // has to be implemented by students
 	}
 	
-	// grober Aufbau der Vergleichsfunktion. Vorher muss noch durch das gesamte Array parkingSlots iteriert werden.. (Funktion steht noch nicht)
+	
 	/**
 	 * Funktion zur Unterscheidung zwischen bereits gefundenen und neuen Parklücken
 	 * @param a Parklücke 1 (bereits in Datenbank)
 	 * @param b Parklücke 2 (neu gemessen)
 	 * @return true wenn bekannt; false wenn unbekannt
 	 */
-	public boolean sameSlot ( ParkingSlot a, ParkingSlot b) {
-		
-		if((Math.abs(a.getBackBoundaryPosition().getX() - b.getBackBoundaryPosition().getX()) < SAME_PARKING_SLOT_DIFFERENCE ) && (Math.abs(a.getBackBoundaryPosition().getY() - b.getBackBoundaryPosition().getY()) < SAME_PARKING_SLOT_DIFFERENCE) || (Math.abs(a.getFrontBoundaryPosition().getX() - b.getFrontBoundaryPosition().getX()) < SAME_PARKING_SLOT_DIFFERENCE) && (Math.abs(a.getFrontBoundaryPosition().getY() - b.getFrontBoundaryPosition().getY()) < SAME_PARKING_SLOT_DIFFERENCE))
-			return true;
-		
+	public boolean sameSlot (ParkingSlot a, ParkingSlot b) {
+		if(a.getBackBoundaryPosition() != null && a.getFrontBoundaryPosition() != null) {
+			if(((Math.abs(a.getBackBoundaryPosition().getX() - b.getBackBoundaryPosition().getX()) < SAME_PARKING_SLOT_DIFFERENCE ) && (Math.abs(a.getBackBoundaryPosition().getY() - b.getBackBoundaryPosition().getY()) < SAME_PARKING_SLOT_DIFFERENCE)) || (Math.abs(a.getFrontBoundaryPosition().getX() - b.getFrontBoundaryPosition().getX()) < SAME_PARKING_SLOT_DIFFERENCE) && ((Math.abs(a.getFrontBoundaryPosition().getY() - b.getFrontBoundaryPosition().getY()) < SAME_PARKING_SLOT_DIFFERENCE))) {
+				return true;
+			}
+			else return false;
+		}
 		else return false;
 		
 	}
@@ -511,10 +585,3 @@ public class NavigationAT implements INavigation{
 		else return false;
 	}*/
 }
-
-
-
-
-
-
-

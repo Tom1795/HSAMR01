@@ -5,6 +5,7 @@ import lejos.robotics.navigation.Pose;
 import parkingRobot.IControl;
 import parkingRobot.IMonitor;
 import parkingRobot.IPerception;
+import parkingRobot.IControl.ControlMode;
 import parkingRobot.IPerception.*;
 import lejos.nxt.NXTMotor;
 import parkingRobot.INavigation;
@@ -92,6 +93,12 @@ public class ControlRST implements IControl {
     boolean merkerr=false;
     boolean merkerl=false;
     boolean kurve=false;
+    boolean kurve_alt =false;
+    int ecke =0;
+    int eckengezählt=0;
+    int f =1;
+    double dist_gerade = 0;   /* Distanz für Geradeausfahrt cm*/
+    double dist_kurve = 360; /* Drehung in °*/
 	double pidL=0;
 	double pidR=0;
 	int i =0;
@@ -397,6 +404,17 @@ public class ControlRST implements IControl {
 		
 		
 		if (!kurve){
+			
+		if (kurve_alt = true && !kurve){
+			
+			ecke ++;
+			eckengezählt= ecke % 7;
+			
+		}
+		
+		kurve_alt= false;
+		
+		
 	  // MONITOR (example)
 			monitor.writeControlVar("LeftSensor", ""+this.lineSensorLeftValue);	
 			monitor.writeControlVar("RightSensor", ""+this.lineSensorRightValue);	
@@ -430,22 +448,29 @@ public class ControlRST implements IControl {
 		if (j>=5){
 			pidL=0;
 			pidR=30;
+			kurve_alt = true;
 		}
 		
 		if (i>=5){
 			pidL=30;
 			pidR=0;
+			kurve_alt = true;
 		}
-			
+		
+		
+		
 			
 			
 		rightMotor.setPower((int)(highPower-Math.round(pidL))); // Runden auf int durch Math.round
 		leftMotor.setPower((int)(highPower-Math.round(pidR)));
 		
+		
 	}
 		
 		
-	
+	public int getEcke(){
+		return eckengezählt;
+	}
 
 	
 	
@@ -504,11 +529,11 @@ public class ControlRST implements IControl {
 
 	/** the distance between the wheels in m */
 
-	private static final double WHEEL_DISTANCE = 18; /*12cm Radabstand + 6 cm Offset durch empirisches probieren*/
+	private static final double WHEEL_DISTANCE = 18.2; /*12cm Radabstand + 6 cm Offset durch empirisches probieren*/
 
 	/** the radius of the wheels */
 
-	private static final double WHEEL_RADIUS = 5.6; 
+	private static final double WHEEL_RADIUS = 5.5; 
 
 	/** the distance traveled when the wheel turns one rad */
 
@@ -528,8 +553,12 @@ public class ControlRST implements IControl {
 	 */
 	
 	
+	
 
 	public void drive (double v, double w){
+		
+		
+		
 		
 		//driving_direction = 1;
 		
@@ -551,11 +580,49 @@ public class ControlRST implements IControl {
 		leftMotor.forward();
 		rightMotor.forward();
 	
+		//Beispielprogramm:
+		 
+		  switch (f){
+		  
+		  case 1: 
+		  dist_gerade = 150;
+		  dist_kurve = 0;
+		  vsoll = 10;
+		  wsoll = 0;
+		  break;
+		  case 2:
+			  
+		  dist_gerade = 0;
+		  dist_kurve = 90;
+		  vsoll = 0;
+		  wsoll= 30;
+		  break;
+		  
+		  case 3:
+		  dist_gerade = 30;
+		  dist_kurve = 0;
+		  vsoll = 5;
+		  wsoll = 0;
+		  break;
+		  
+		  case 4:
+		  dist_gerade = 0;
+		  dist_kurve = 90;
+		  vsoll = 0;
+		  wsoll= 30;
+		  break;
+		    
+		 case 5:
+		 setCtrlMode(ControlMode.LINE_CTRL);
+		 break;
+		  
+		  }
+		  monitor.writeControlComment("Zustandf " + f);
 		
-		double dist_gerade =0;   /* Distanz für Geradeausfahrt cm*/
+		
 		dist_gerade = dist_gerade /DISTANCE_PER_ROTATION; 
 		
-		double dist_kurve = 360; /* Drehung in °*/
+		
 		dist_kurve = (dist_kurve /90) * (WHEEL_DISTANCE/ 2)/ DISTANCE_PER_ROTATION ; /* notwendige Radumdrehungen*/
 		
 		double leftAngle 	= this.angleMeasurementLeft.getAngleSum();
@@ -568,14 +635,14 @@ public class ControlRST implements IControl {
 		leftAnglesum = leftAnglesum + leftAngle; 
 		rightAnglesum = rightAnglesum + rightAngle;
 		
-		//monitor.writeControlComment("Winkelp " + Winkel);
+		monitor.writeControlComment("vsol " + vsoll);
 		
-		//monitor.writeControlComment("LeftAngle " + leftAnglesum);	
-		//monitor.writeControlComment("RightAngle "+ rightAnglesum); 
-		//monitor.writeControlComment("kurvendist " + dist_kurve);
+		monitor.writeControlComment("wsol " + wsoll);	
+		monitor.writeControlComment("RightAngle "+ rightAnglesum); 
+		monitor.writeControlComment("left Angle " + leftAnglesum);
 		
-		vsoll = 0; // Geschwindigkeit in cm/s 
-		wsoll = 90; // Drehung in °/s
+		//vsoll = 0; // Geschwindigkeit in cm/s 
+		//wsoll = 90; // Drehung in °/s
 		
 	//EncoderSensor test = controlRightEncoder;
 		//distance_old = this.UOdmometry.getUOdmometryDiffernce();
@@ -588,21 +655,25 @@ public class ControlRST implements IControl {
 		if (w == 0){
 			
 			
-
 				{if (Math.abs(dist_gerade) > leftAnglesum /360 ){
 
 			    speedL = speedR = (int) (v / DISTANCE_PER_ROTATION );
+			    
 
-					}
+						} 
 				else {
 					this.stop();
+					f++;
+					leftAnglesum = 0;
+					rightAnglesum = 0;
+
 					}
 				}
 		}
 
 		else if (v == 0 && w> Math.abs(45))
 
-		{
+		{ 
 			{if (Math.abs(dist_kurve) >  Math.abs(leftAnglesum /360)){
 
 			   speedL = (int) (-WHEEL_DISTANCE / 2.0 * w / DISTANCE_PER_ROTATION);
@@ -612,40 +683,60 @@ public class ControlRST implements IControl {
 					}
 				else {
 					this.stop();
+					f++;
+					leftAnglesum = 0;
+					rightAnglesum = 0;
 					}
 
 			
 
 			}
 		}
+				
 		
 		else if (v == 0 && w<= 45 && w >0)
 
-		{
-			{if (2 * Math.abs(dist_kurve) > Math.abs(leftAnglesum /360 )){
+		{ 
+			{if (2 * Math.abs(dist_kurve) > Math.abs(rightAnglesum /360 )){
 
-			speedL = (int) (WHEEL_DISTANCE * w / DISTANCE_PER_ROTATION);
+			speedR = (int) (WHEEL_DISTANCE * w / DISTANCE_PER_ROTATION);
+			speedL =0;
 
 			}
 			else {
 				this.stop();
+				f++;
+				leftAnglesum = 0;
+				rightAnglesum = 0;
 				}
 
 			}
 		}
 		
 		else if (v == 0 && w<= - 45 && w >0)
+			
 
-		{if (2 * Math.abs(dist_kurve) > Math.abs(rightAnglesum /360 )){
+		{
+			if (2 * Math.abs(dist_kurve) > Math.abs(leftAnglesum /360 )){
 
-			speedR = (int) (WHEEL_DISTANCE * w / DISTANCE_PER_ROTATION);
+			speedL = (int) (WHEEL_DISTANCE * w / DISTANCE_PER_ROTATION);
+			speedR = 0;
 
 			}
 			else {
 				this.stop();
+				f++;
+				leftAnglesum = 0;
+				rightAnglesum = 0;
 				}
-
+			
+			
 			}
+		else if (v == 0 && w ==0){
+			speedR=0;
+			speedL= 0;
+		}
+
 
 	/*	else
 
@@ -660,13 +751,15 @@ public class ControlRST implements IControl {
 		}
 		
      */
+		 
 		
 		
 		rightMotor.setPower(speedR); 
 		
 		leftMotor.setPower(speedL);
+				}
+				
 		
-	}
 	public void prepare(int speedLeft, int speedRight, Pose currentPose) {
 
 	}
