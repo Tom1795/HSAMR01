@@ -96,6 +96,8 @@ public class ControlRST implements IControl {
     boolean kurve_alt =false;
     int ecke =0;
     int eckengezählt=0;
+    int kurvelinks =0;
+    int kurverechts =0;
     int f =1;
     double dist_gerade = 0;   /* Distanz für Geradeausfahrt cm*/
     double dist_kurve = 360; /* Drehung in °*/
@@ -114,6 +116,10 @@ public class ControlRST implements IControl {
 	
 	double leftAnglesum = 0;
 	double rightAnglesum =0;
+	double leftAnglesum_line = 0;
+	double rightAnglesum_line =0;
+	double leftAngle_line =0;
+	 double rightAngle_line =0;
 	
 	double driving_direction = 1;
 
@@ -281,6 +287,10 @@ public class ControlRST implements IControl {
 		this.lineSensorLeft  		= perception.getLeftLineSensor();	
 		this.lineSensorRightValue		= perception.getRightLineSensorValue();
 		this.lineSensorLeftValue  		= perception.getLeftLineSensorValue();
+		this.angleMeasurementLeft  	= this.encoderLeft.getEncoderMeasurement();
+
+		this.angleMeasurementRight 	= this.encoderRight.getEncoderMeasurement();
+
 	}
 	
 	/**
@@ -403,22 +413,20 @@ public class ControlRST implements IControl {
 		
 		
 		
-		if (!kurve){
-			
-		if (kurve_alt = true && !kurve){
-			
-			ecke ++;
-			eckengezählt= ecke % 7;
-			
-		}
-		
-		kurve_alt= false;
+		//kurve_alt= false;
 		
 		
 	  // MONITOR (example)
 			monitor.writeControlVar("LeftSensor", ""+this.lineSensorLeftValue);	
 			monitor.writeControlVar("RightSensor", ""+this.lineSensorRightValue);	
+		
+		if (!kurve){
 			
+		
+		
+		
+		
+			 
 		errorL = (100- lineSensorLeftValue)/100;
 		errorR = (100 -lineSensorRightValue)/100;
 		
@@ -431,6 +439,8 @@ public class ControlRST implements IControl {
 		pidR = (errorL * Kp) + ( integralL * Ki) + ( derivateL * Kd);
 		pidL = (errorR * Kp) + ( integralR * Ki) + ( derivateR * Kd);
 		
+	
+		
 		}
 		
 
@@ -438,24 +448,69 @@ public class ControlRST implements IControl {
 		fehleraltL = errorL;
 		fehleraltR = errorR;
 		
+		
+		
 		if((this.lineSensorLeft != 2) && (this.lineSensorRight == 2)){ 
-			i++;
-			j=0;}
-		if((this.lineSensorLeft == 2) && (this.lineSensorRight != 2)){ 
-			j++;
-			i=0;}
 			
+			i++;
+			j=0;
+			
+			leftAngle_line 	= this.angleMeasurementLeft.getAngleSum()  ;
+			rightAngle_line = this.angleMeasurementRight.getAngleSum() ;
+			
+			leftAnglesum_line = leftAnglesum_line + leftAngle_line; 
+			rightAnglesum_line = rightAnglesum_line + rightAngle_line;
+		}
+		if((this.lineSensorLeft == 2) && (this.lineSensorRight != 2)){ 
+			
+			j++;
+			i=0;
+			
+			leftAngle_line 	= this.angleMeasurementLeft.getAngleSum()  ;
+			rightAngle_line = this.angleMeasurementRight.getAngleSum() ;
+			
+			leftAnglesum_line = leftAnglesum_line + leftAngle_line; 
+			rightAnglesum_line = rightAnglesum_line + rightAngle_line;
+			}
+			
+		if((this.lineSensorLeft == 0) && (this.lineSensorRight == 0)){  
+			leftAnglesum_line =0;
+			rightAnglesum_line =0;	
+		}
+		
 		if (j>=5){
 			pidL=0;
 			pidR=30;
 			kurve_alt = true;
+			
+			
+			
 		}
 		
 		if (i>=5){
 			pidL=30;
 			pidR=0;
 			kurve_alt = true;
+			
+			
 		}
+		if(leftAnglesum_line > 200 && kurve_alt == true){
+			
+		kurverechts ++;
+		leftAnglesum_line =0;
+		rightAnglesum_line =0;
+		}
+		
+		if(rightAnglesum_line > 200  && kurve_alt == true){
+			
+		kurvelinks ++;
+		leftAnglesum_line =0;
+		rightAnglesum_line =0;
+			}
+		monitor.writeControlComment("KurveL " + kurvelinks);	
+		monitor.writeControlComment("KurveR " + kurverechts);
+		monitor.writeControlComment("RightAngle "+ rightAnglesum_line); 
+		monitor.writeControlComment("left Angle " + leftAnglesum_line);
 		
 		
 		
@@ -465,13 +520,17 @@ public class ControlRST implements IControl {
 		leftMotor.setPower((int)(highPower-Math.round(pidR)));
 		
 		
-	}
-		
-		
-	public int getEcke(){
-		return eckengezählt;
-	}
+}
 
+		
+
+	public int KurveL(){
+		return kurvelinks;
+	}
+	public int KurveR(){
+		return kurverechts;
+	
+	}
 	
 	
 	private void stop(){
@@ -627,7 +686,7 @@ public class ControlRST implements IControl {
 		
 		double leftAngle 	= this.angleMeasurementLeft.getAngleSum();
 		double rightAngle 	= this.angleMeasurementRight.getAngleSum();
-		Pose winkel       = navigation.getPose();
+		
 		//double winkelresult = this.winkel
 		
 		
