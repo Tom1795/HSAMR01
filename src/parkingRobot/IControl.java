@@ -19,6 +19,7 @@ public interface IControl {
 		
 		/**
 		 * folgt schwarzer Linie mittels PID Regler. Es gibt zwei verschieden Modi, einen PID Rgler und einer Eckenerkennung. 
+		 * Weiterhin werden Ecken ausgegeben, falls welche erkannt werden. 
 		 */
 		LINE_CTRL,
 		
@@ -28,7 +29,7 @@ public interface IControl {
 		PARK_CTRL,
 		
 		/**
-		 * v/w-Control
+		 * Regelung der Geschwindigkeit und der Radgeschwindigkeit. 
 		 */
 		VW_CTRL,
 		
